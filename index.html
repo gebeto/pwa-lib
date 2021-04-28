@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1 user-scalable=no, viewport-fit=cover">
+  <title>PWA-Lib</title>
+  <style>
+    input, button {
+      font-size: 16px;
+    }
+    .rows>input {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  
+  <form>
+    <fieldset class="rows">
+      <input type="file" id="icon" />
+      <input type="text" id="title" placeholder="Title" />
+      <input type="url" id="url" placeholder="URL" />
+      <button type="button" id="download">Create app</button>
+    </fieldset>
+  </form>
+
+  <u>
+    <li data-app="dribbble" data-title="Dribbble" data-url="https://dribbble.com">
+      <img width="64" src="apps/dribbble/icon.png" />
+      Dribble
+    </li>
+
+    <li data-app="dribbble" data-title="Dribbble" data-url="https://dribbble.com">
+      <img width="64" src="apps/dribbble/icon.png" />
+      Dribble
+    </li>
+  </u>
+
+  <script>
+    function download(filename, text) {
+      var element = document.createElement('a');
+      element.setAttribute('href', 'data:application/x-apple-aspen-config;charset=utf-8,' + encodeURIComponent(text));
+      element.setAttribute('download', filename);
+      element.style.display = 'none';
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+    }
+
+    function xmlCert(title, url, icon) {
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>ConsentText</key>
+	<dict>
+		<key>default</key>
+		<string>Choose 'Install' and enter passcode if prompted.</string>
+	</dict>
+	<key>PayloadContent</key>
+	<array>
+		<dict>
+			<key>FullScreen</key>
+			<true/>
+			<key>Icon</key>
+			<data>${icon}</data>
+			<key>IsRemovable</key>
+			<true/>
+			<key>Label</key>
+			<string>${title}</string>
+			<key>PayloadDescription</key>
+			<string>Turn any website into an app on your home screen</string>
+			<key>PayloadDisplayName</key>
+			<string>${title}</string>
+			<key>PayloadIdentifier</key>
+			<string>${title}</string>
+			<key>PayloadOrganization</key>
+			<string>Me</string>
+			<key>PayloadType</key>
+			<string>com.apple.webClip.managed</string>
+			<key>PayloadUUID</key>
+			<string>c3b2c123-6253-464e-afde-0d987400da0f</string>
+			<key>PayloadVersion</key>
+			<integer>1</integer>
+			<key>Precomposed</key>
+			<false/>
+			<key>URL</key>
+			<string>${url}</string>
+		</dict>
+	</array>
+	<key>PayloadDescription</key>
+	<string>Turn any website into an app on your home screen</string>
+	<key>PayloadDisplayName</key>
+	<string>${title}</string>
+	<key>PayloadIdentifier</key>
+	<string>${title}</string>
+	<key>PayloadOrganization</key>
+	<string>WebApp: ${url}</string>
+	<key>PayloadRemovalDisallowed</key>
+	<false/>
+	<key>PayloadType</key>
+	<string>Configuration</string>
+	<key>PayloadUUID</key>
+	<string>345097fb-d4f7-4a34-ab90-2e3f1ad62eed</string>
+	<key>PayloadVersion</key>
+	<integer>1</integer>
+</dict>
+</plist>`;
+    }
+
+    function getBase64(file, cb) {
+      var reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = function () {
+        console.log(reader.result);
+        cb(reader.result);
+      };
+      reader.onerror = function (error) {
+        console.log('Error: ', error);
+      };
+    }
+
+    const titleInput = document.getElementById("title");
+    const urlInput = document.getElementById("url");
+    const iconInput = document.getElementById("icon");
+    const downloadButton = document.getElementById("download");
+
+    downloadButton.addEventListener("click", () => {
+      getBase64(iconInput.files[0], (iconBase64) => {
+        download(
+          "cert.mobileconfig",
+          xmlCert(
+            titleInput.value,
+            urlInput.value,
+            iconBase64.split(",")[1],
+          )
+        );
+      })
+    });
+
+
+    const apps = document.querySelectorAll("[data-app]");
+    for (let i = 0; i < apps.length; i++) {
+      apps[i].addEventListener("click", (e) => {
+        const item = e.currentTarget;
+        const app = item.getAttribute("data-app");
+        const title = item.getAttribute("data-title");
+        const url = item.getAttribute("data-url");
+        fetch(`apps/${app}/icon.png`).then(res => res.blob()).then(res => {
+          getBase64(res, (iconBase64) => {
+            download("cert.mobileconfig", xmlCert(title, url, iconBase64.split(",")[1]));
+          })
+        });
+      })
+    }
+  </script>
+</body>
+</html>
